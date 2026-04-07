@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ company.company_name }} — Bee Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- ===================== TOPBAR ===================== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="topbar-brand" href="/">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="Bee Scanner" class="topbar-logo">
+      </a>
+      <div class="topbar-right" style="margin-left:auto">
+        <div class="topbar-avatar" title="Profil">BS</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== PAGE CONTENT ===================== -->
+  <main class="page-content">
+
+    <!-- Breadcrumb -->
+    <div class="company-breadcrumb">
+      <a href="/" class="company-breadcrumb-link">
+        <i class="bi bi-arrow-left"></i> Wszystkie firmy
+      </a>
+      <span class="company-breadcrumb-sep">/</span>
+      <span class="company-breadcrumb-current">{{ company.company_name }}</span>
+    </div>
+
+    <!-- Company header -->
+    <div class="company-header-card">
+      <div class="company-header-main">
+        <div class="company-header-avatar">
+          {{ company.company_name[:2].upper() }}
+        </div>
+        <div class="company-header-info">
+          <h1 class="company-header-name">{{ company.company_name }}</h1>
+          <div class="company-header-meta">
+            {% for platform in company.platforms.split(',') %}
+              <span class="platform-tag platform-tag--{{ platform.strip() }}">{{ platform.strip() }}</span>
+            {% endfor %}
+            {% set n = company.total_listings | int %}
+            <span class="count-badge {{ 'count-badge--high' if n >= 5 else ('count-badge--mid' if n >= 3 else 'count-badge--low') }}">
+              {{ n }} ogłoszeń
+            </span>
+          </div>
+        </div>
+      </div>
+      {% if company.level %}
+      <div class="company-header-score">
+        <span class="level-badge level-badge--{{ company.level }} level-badge--lg">Poziom {{ company.level }}</span>
+        <div class="company-header-score-sub">{{ company.score }} pkt</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Two-column grid -->
+    <div class="company-page-grid">
+
+      <!-- ===== LEFT: HubSpot CRM ===== -->
+      <div class="company-col-crm">
+        <div class="section-card">
+          <div class="section-card-header">
+            <i class="bi bi-diagram-3" style="color:#185FA5"></i>
+            <span class="section-card-title">HubSpot CRM</span>
+            <span id="hs-status-badge" class="hs-inline-status"></span>
+          </div>
+          <div id="hs-body">
+
+            <!-- Loading -->
+            <div id="hs-loading" class="hs-loading">
+              <div class="hs-loading-spinner"></div>
+              <div class="hs-loading-text">Sprawdzam HubSpot...</div>
+            </div>
+
+            <!-- Stan A: znaleziono -->
+            <div id="hs-state-found" style="display:none">
+
+              <!-- Alert: ostatni kontakt > 30 dni -->
+              <div id="hs-contact-alert" class="hs-alert" style="display:none">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span id="hs-alert-text"></span>
+              </div>
+
+              <!-- Activity timeline -->
+              <div class="hs-section">
+                <div class="hs-section-title"><i class="bi bi-clock-history"></i> Ostatnie aktywności</div>
+                <div id="hs-timeline" class="hs-timeline"></div>
+              </div>
+
+              <!-- Deal history -->
+              <div class="hs-section">
+                <div class="hs-section-title"><i class="bi bi-clock-history" style="color:var(--primary)"></i> Historia dealów</div>
+                <div id="hs-deals-list" class="hs-deals-list"></div>
+              </div>
+
+              <!-- CRM actions -->
+              <div class="hs-crm-actions">
+                <button class="btn-hs-email" onclick="openEmailModal()">
+                  <i class="bi bi-envelope"></i> Napisz maila
+                </button>
+                <a class="btn-hs-open" id="hs-open-link" href="#" target="_blank" rel="noopener">
+                  <i class="bi bi-box-arrow-up-right"></i> Otwórz w HubSpot
+                </a>
+              </div>
+            </div>
+
+            <!-- Stan B: nie znaleziono -->
+            <div id="hs-state-notfound" style="display:none">
+              <div class="hs-notfound">
+                <div class="hs-notfound-icon"><i class="bi bi-building-x"></i></div>
+                <p class="hs-notfound-text">Nie znaleziono firmy w HubSpot</p>
+                <button class="btn-hs-add" onclick="addToHubSpot()">
+                  <i class="bi bi-plus-circle"></i> Dodaj do HubSpot
+                </button>
+                <div style="margin-top:0.75rem">
+                  <button class="btn-hs-email" onclick="openEmailModal()" style="width:100%">
+                    <i class="bi bi-envelope"></i> Napisz maila
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Błąd -->
+            <div id="hs-state-error" style="display:none">
+              <div class="hs-notfound">
+                <div class="hs-notfound-icon"><i class="bi bi-wifi-off"></i></div>
+                <p class="hs-notfound-text" id="hs-error-text">Błąd połączenia</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: Lead Score + Ogłoszenia ===== -->
+      <div class="company-col-main">
+
+        <!-- Lead Score -->
+        <div class="section-card ls-card" style="margin-bottom:1.25rem">
+          <div class="section-card-header ls-card-header" onclick="toggleLeadScore()" style="cursor:pointer; margin-bottom:0; border-bottom:none; padding-bottom:0;">
+            <i class="bi bi-bar-chart" style="color:var(--primary)"></i>
+            <span class="section-card-title">Lead Score</span>
+            <div class="ls-header-right">
+              <div class="ls-live-score">
+                <span class="ls-score-num">{{ company.score or 0 }}</span>
+                <span class="ls-score-label">pkt</span>
+              </div>
+              <span class="ls-level-label">Poziom</span>
+              <span class="level-badge level-badge--{{ company.level or 'D' }}">{{ company.level or 'D' }}</span>
+              <i class="bi bi-chevron-down ls-toggle-chevron" id="ls-chevron"></i>
+            </div>
+          </div>
+
+          <!-- Collapsible body -->
+          <div id="ls-body" style="display:none">
+          <div style="height:0.75rem; border-bottom:1px solid var(--border); margin: 0 -1.5rem; margin-bottom:0;"></div>
+
+          <!-- 1. Aktywność rekrutacyjna -->
+          <div class="ls-section">
+            <div class="ls-section-label">Aktywność rekrutacyjna</div>
+
+            <label class="ls-row ls-row--pos" data-crit-id="has_recruitment">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Ma otwartą rekrutację teraz</span>
+              <span class="ls-pts">+1 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos" data-crit-id="three_plus">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Ma 3+ otwartych ofert jednocześnie</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos" data-crit-id="regular_recruiting">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Rekrutuje regularnie (&gt;4x w roku)</span>
+              <span class="ls-pts">+3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Korzysta z zewnętrznych agencji (widać ogłoszenia)</span>
+              <span class="ls-pts">−1 pkt</span>
+            </label>
+
+            <div class="ls-radio-group">
+              <div class="ls-radio-group-label">Czas otwarcia roli</div>
+              <label class="ls-row ls-row--radio">
+                <span class="ls-radio-ui ls-radio-ui--selected"></span>
+                <span class="ls-label-text">Nieznany / brak danych</span>
+                <span class="ls-pts">0 pkt</span>
+              </label>
+              <label class="ls-row ls-row--radio ls-row--pos">
+                <span class="ls-radio-ui"></span>
+                <span class="ls-label-text">Rola otwarta poniżej 30 dni</span>
+                <span class="ls-pts">+1 pkt</span>
+              </label>
+              <label class="ls-row ls-row--radio ls-row--pos">
+                <span class="ls-radio-ui"></span>
+                <span class="ls-label-text">Rola otwarta powyżej 30 dni</span>
+                <span class="ls-pts">+3 pkt</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 2. Profil stanowisk -->
+          <div class="ls-section">
+            <div class="ls-section-label">Profil stanowisk</div>
+
+            <label class="ls-row ls-row--pos" data-crit-id="niche_role">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Rola niszowa lub rzadka na rynku (np. finanse, prawo, IT)</span>
+              <span class="ls-pts">+3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos" data-crit-id="management_role">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Rola menedżerska / dyrektorska / C-level</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Rola wymagająca języka obcego lub relokacji</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos" data-crit-id="operational_role">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Typowa rola operacyjna (sprzedaż, obsługa, admin)</span>
+              <span class="ls-pts">+1 pkt</span>
+            </label>
+          </div>
+
+          <!-- 3. Kondycja i wzrost firmy -->
+          <div class="ls-section">
+            <div class="ls-section-label">Kondycja i wzrost firmy</div>
+
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Firma zatrudnia 50–500 pracowników</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Firma w fazie szybkiego wzrostu (&gt;20% YoY)</span>
+              <span class="ls-pts">+3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Świeże finansowanie (VC / seria A+)</span>
+              <span class="ls-pts">+3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Expansion — otwiera nowy oddział / kraj</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+          </div>
+
+          <!-- 4. Sygnały zakupowe -->
+          <div class="ls-section">
+            <div class="ls-section-label">Sygnały zakupowe</div>
+
+            <label class="ls-row ls-row--pos" data-crit-id="career_page">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Aktywna strona kariery lub LinkedIn</span>
+              <span class="ls-pts">+1 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos" data-crit-id="both_platforms">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Obecność na obu portalach (justjoin + rocketjobs)</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Odpowiedział na cold outreach</span>
+              <span class="ls-pts">+2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--pos">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Poprosił o ofertę / wycenę</span>
+              <span class="ls-pts">+3 pkt</span>
+            </label>
+          </div>
+
+          <!-- 5. Czynniki obniżające -->
+          <div class="ls-section ls-section--last" style="margin-top:0.75rem">
+            <div class="ls-section-label">Czynniki obniżające</div>
+
+            <label class="ls-row ls-row--neg">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Zatrudnia wyłącznie wewnętrznie (HR in-house)</span>
+              <span class="ls-pts">−2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Firma w restrukturyzacji / zwolnienia grupowe</span>
+              <span class="ls-pts">−3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Budżet na rekrutację zamrożony (potwierdzone w rozmowie)</span>
+              <span class="ls-pts">−3 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Zły feedback z poprzedniej współpracy</span>
+              <span class="ls-pts">−2 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg ls-row--critical" data-crit-id="blue_collar">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Rola blue collar (fizyczna / produkcja / magazyn)</span>
+              <span class="ls-pts">−10 pkt</span>
+            </label>
+            <label class="ls-row ls-row--neg ls-row--critical" data-crit-id="competitor_agency">
+              <span class="ls-checkbox-ui"></span>
+              <span class="ls-label-text">Ogłoszenie wystawione przez inną agencję rekrutacyjną</span>
+              <span class="ls-pts">−10 pkt</span>
+            </label>
+          </div>
+          </div><!-- /ls-body -->
+        </div>
+
+        <!-- Ogłoszenia -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <i class="bi bi-briefcase" style="color:var(--secondary-yellow)"></i>
+            <span class="section-card-title">Ogłoszenia</span>
+            <span class="section-card-count">{{ jobs | length }}</span>
+          </div>
+          <table class="modal-table" style="margin-top:0.75rem">
+            <thead>
+              <tr>
+                <th>Stanowisko</th>
+                <th>Platforma</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for job in jobs %}
+              <tr>
+                <td>{{ job.job_title }}</td>
+                <td><span class="platform-tag platform-tag--{{ job.platform }}">{{ job.platform }}</span></td>
+                <td>
+                  <a href="{{ job.job_url }}" target="_blank" rel="noopener" class="btn-open-link">
+                    Otwórz <i class="bi bi-arrow-up-right"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== EMAIL MODAL ===================== -->
+  <div class="modal fade" id="emailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-envelope-paper" style="color:var(--primary);margin-right:0.4rem"></i>
+            Generator emaila &mdash; <strong>{{ company.company_name }}</strong>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="email-tabs">
+            <button class="email-tab active" data-type="cold" onclick="selectEmailType(this)">
+              <i class="bi bi-send"></i> Pierwszy kontakt
+            </button>
+            <button class="email-tab" data-type="followup" onclick="selectEmailType(this)">
+              <i class="bi bi-reply"></i> Follow-up
+            </button>
+            <button class="email-tab" data-type="followup_call" onclick="selectEmailType(this)">
+              <i class="bi bi-telephone-outbound"></i> Po rozmowie
+            </button>
+          </div>
+          <div class="email-generate-row">
+            <button class="btn-generate-email" id="btn-generate-email" onclick="generateEmail()">
+              <span class="btn-spinner" id="email-spinner"></span>
+              <i class="bi bi-robot" id="email-gen-icon"></i>
+              Generuj email
+            </button>
+          </div>
+          <div id="email-result" style="display:none">
+            <div class="email-subject-row">
+              <span class="email-label">Temat</span>
+              <div class="email-subject-value" id="email-subject"></div>
+              <button class="btn-copy-small" onclick="copyEmailText('email-subject')" title="Kopiuj temat">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+            <div class="email-body-row">
+              <div class="email-label-row">
+                <span class="email-label">Treść</span>
+                <button class="btn-copy-small" onclick="copyEmailText('email-body')" title="Kopiuj treść">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </div>
+              <div class="email-body-value" id="email-body"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    var COMPANY_NAME   = {{ company.company_name | tojson }};
+    var COMPANY_SCORE  = {{ company | tojson }};
+    var currentEmailType = 'cold';
+    var currentHsData    = null;
+
+    /* ================================================================
+       AUTO-LOAD HUBSPOT
+       ================================================================ */
+    (function loadHubSpot() {
+      fetch('/api/hubspot/lookup?company=' + encodeURIComponent(COMPANY_NAME))
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          currentHsData = data;
+          document.getElementById('hs-loading').style.display = 'none';
+          if (data.found) renderHsFound(data);
+          else            renderHsNotFound();
+        })
+        .catch(function(err) {
+          document.getElementById('hs-loading').style.display    = 'none';
+          document.getElementById('hs-state-error').style.display = '';
+          document.getElementById('hs-error-text').textContent   = 'Błąd: ' + err.message;
+        });
+    })();
+
+    function renderHsFound(data) {
+      var badge = document.getElementById('hs-status-badge');
+      badge.innerHTML   = '<i class="bi bi-check-circle-fill"></i> W HubSpot';
+      badge.className   = 'hs-inline-status hs-inline-status--found';
+
+      if (data.hubspot_url) {
+        document.getElementById('hs-open-link').href = data.hubspot_url;
+      }
+
+      document.getElementById('hs-state-found').style.display = '';
+
+      // Alert: ostatni kontakt w ciągu 30 dni → konsultuj przed wysyłką
+      var alertEl = document.getElementById('hs-contact-alert');
+      if (data.days_since_contact !== null && data.days_since_contact !== undefined && data.days_since_contact <= 30) {
+        alertEl.style.display = 'flex';
+        var ownerPart = data.owner_name ? data.owner_name : 'Opiekun';
+        document.getElementById('hs-alert-text').textContent =
+          ownerPart + ' miał/a kontakt ' + data.days_since_contact + ' dni temu. Przed wysyłką — skonsultuj się z nią/nim.';
+      }
+
+      // Timeline
+      var timelineEl = document.getElementById('hs-timeline');
+      if (data.activities && data.activities.length > 0) {
+        timelineEl.innerHTML = data.activities.map(function(a, idx) {
+          var dotClass = 'hs-dot--' + (a.type || 'note');
+          var dateStr  = (a.timestamp || '').substring(0, 10);
+          var hasBody  = a.body && a.body.trim().length > 0;
+          var bodyId   = 'act-body-' + idx;
+          return '<div class="hs-timeline-item' + (hasBody ? ' hs-timeline-item--expandable' : '') + '"'
+            + (hasBody ? ' onclick="toggleActivity(this)"' : '') + '>'
+            + '<div class="hs-timeline-dot ' + dotClass + '"></div>'
+            + '<div class="hs-timeline-content">'
+            + '<div class="hs-timeline-header">'
+            + '<span class="hs-timeline-label">' + escHtml(a.label || '') + '</span>'
+            + (hasBody ? '<i class="bi bi-chevron-down hs-act-chevron"></i>' : '')
+            + '</div>'
+            + (dateStr ? '<div class="hs-timeline-date">' + dateStr + '</div>' : '')
+            + (hasBody ? '<div class="hs-timeline-body" id="' + bodyId + '" style="display:none">' + escHtml(a.body) + '</div>' : '')
+            + '</div></div>';
+        }).join('');
+      } else {
+        timelineEl.innerHTML = '<div style="color:var(--text-faint);font-size:0.8125rem;">Brak historii aktywności</div>';
+      }
+
+      // Historia dealów
+      var dealsEl = document.getElementById('hs-deals-list');
+      if (data.deals && data.deals.length > 0) {
+        dealsEl.innerHTML = data.deals.map(function(d) {
+          var dateStr = formatDatePL(d.date_raw);
+          return '<div class="hs-deal-item">'
+            + (d.name ? '<div class="hs-deal-name">' + escHtml(d.name) + '</div>' : '')
+            + '<div class="hs-deal-row">'
+            + (dateStr ? '<span class="hs-deal-date">' + escHtml(dateStr) + '</span>' : '')
+            + (d.pipeline_name ? '<span class="hs-deal-pipeline">' + escHtml(d.pipeline_name) + '</span>' : '')
+            + '</div>'
+            + (d.stage_name ? '<div class="hs-deal-stage">' + escHtml(d.stage_name) + '</div>' : '')
+            + '</div>';
+        }).join('');
+      } else {
+        dealsEl.innerHTML = '<div class="hs-empty-list">Brak historii dealów</div>';
+      }
+
+    }
+
+    function renderHsNotFound() {
+      var badge = document.getElementById('hs-status-badge');
+      badge.innerHTML = '<i class="bi bi-x-circle-fill"></i> Nie w HubSpot';
+      badge.className = 'hs-inline-status hs-inline-status--notfound';
+      document.getElementById('hs-state-notfound').style.display = '';
+    }
+
+    function addToHubSpot() {
+      var btn = document.querySelector('.btn-hs-add');
+      if (!btn) return;
+      btn.disabled  = true;
+      btn.innerHTML = '<span class="btn-spinner active"></span> Dodaję...';
+
+      fetch('/api/hubspot/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({company_name: COMPANY_NAME}),
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            currentHsData = { found: true, hubspot_url: data.hubspot_url, activities: [], deal: null, days_since_contact: null };
+            document.getElementById('hs-state-notfound').style.display = 'none';
+            renderHsFound(currentHsData);
+          } else {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="bi bi-plus-circle"></i> Dodaj do HubSpot';
+            alert('Błąd: ' + (data.error || 'Nieznany błąd'));
+          }
+        })
+        .catch(function(err) {
+          btn.disabled  = false;
+          btn.innerHTML = '<i class="bi bi-plus-circle"></i> Dodaj do HubSpot';
+          alert('Błąd: ' + err.message);
+        });
+    }
+
+    /* ================================================================
+       EMAIL GENERATOR
+       ================================================================ */
+    function openEmailModal() {
+      document.getElementById('email-result').style.display = 'none';
+      currentEmailType = 'cold';
+      document.querySelectorAll('.email-tab').forEach(function(t){
+        t.classList.toggle('active', t.dataset.type === 'cold');
+      });
+      new bootstrap.Modal(document.getElementById('emailModal')).show();
+    }
+
+    function selectEmailType(btn) {
+      currentEmailType = btn.dataset.type;
+      document.querySelectorAll('.email-tab').forEach(function(t){ t.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('email-result').style.display = 'none';
+    }
+
+    function generateEmail() {
+      var btn     = document.getElementById('btn-generate-email');
+      var spinner = document.getElementById('email-spinner');
+      var icon    = document.getElementById('email-gen-icon');
+      btn.disabled = true;
+      spinner.classList.add('active');
+      icon.style.display = 'none';
+      document.getElementById('email-result').style.display = 'none';
+
+      fetch('/api/ai/email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          company_name: COMPANY_NAME,
+          email_type:   currentEmailType,
+          context: {
+            job_titles:     COMPANY_SCORE.job_titles     || '',
+            total_listings: COMPANY_SCORE.total_listings || '',
+            platforms:      COMPANY_SCORE.platforms      || '',
+          },
+        }),
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          btn.disabled = false;
+          spinner.classList.remove('active');
+          icon.style.display = '';
+          document.getElementById('email-subject').textContent = data.subject || '';
+          document.getElementById('email-body').textContent    = data.body    || '';
+          document.getElementById('email-result').style.display = '';
+        })
+        .catch(function(err) {
+          btn.disabled = false;
+          spinner.classList.remove('active');
+          icon.style.display = '';
+          alert('Błąd: ' + err.message);
+        });
+    }
+
+    function toggleActivity(item) {
+      var body    = item.querySelector('.hs-timeline-body');
+      var chevron = item.querySelector('.hs-act-chevron');
+      if (!body) return;
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    }
+
+    function copyEmailText(elementId) {
+      navigator.clipboard.writeText(document.getElementById(elementId).textContent).catch(function(){});
+    }
+
+    function escHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    /* ================================================================
+       LEAD SCORE — toggle + pre-check z bazy (read-only)
+       ================================================================ */
+    function toggleLeadScore() {
+      var body    = document.getElementById('ls-body');
+      var chevron = document.getElementById('ls-chevron');
+      var header  = document.querySelector('.ls-card-header');
+      var isOpen  = body.style.display !== 'none';
+      body.style.display         = isOpen ? 'none' : 'block';
+      chevron.style.transform    = isOpen ? '' : 'rotate(180deg)';
+      header.style.borderBottom  = isOpen ? 'none' : '1px solid var(--border)';
+      header.style.paddingBottom = isOpen ? '0' : '0.75rem';
+      header.style.marginBottom  = isOpen ? '0' : '1rem';
+    }
+
+    (function initLeadScore() {
+      var matched = [];
+      try {
+        matched = JSON.parse({{ company.matched_criteria | default('[]') | tojson }});
+      } catch(e) {}
+
+      matched.forEach(function(critId) {
+        var row = document.querySelector('[data-crit-id="' + critId + '"]');
+        if (row) row.classList.add('ls-row--checked');
+      });
+    })();
+
+    function formatDatePL(dateStr) {
+      if (!dateStr) return '';
+      var months = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+      try {
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr.substring(0, 10);
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+      } catch(e) {
+        return dateStr.substring(0, 10);
+      }
+    }
+  </script>
+
+</body>
+</html>

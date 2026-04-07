@@ -1,0 +1,32 @@
+[
+  {
+    "company_name": "Allegro",
+    "job_title": "Senior Python Developer",
+    "platform": "justjoin",
+    "job_url": "https://justjoin.it/job-offer/allegro-senior-python-developer-warszawa"
+  },
+  {
+    "company_name": "Allegro",
+    "job_title": "Data Engineer",
+    "platform": "justjoin",
+    "job_url": "https://justjoin.it/job-offer/allegro-data-engineer-warszawa"
+  },
+  {
+    "company_name": "CD Projekt",
+    "job_title": "Game Designer",
+    "platform": "justjoin",
+    "job_url": "https://justjoin.it/job-offer/cd-projekt-game-designer-warszawa"
+  },
+  {
+    "company_name": "Asseco",
+    "job_title": "Java Backend Developer",
+    "platform": "justjoin",
+    "job_url": "https://justjoin.it/job-offer/asseco-java-backend-developer-krakow"
+  },
+  {
+    "company_name": "Asseco",
+    "job_title": "QA Engineer",
+    "platform": "justjoin",
+    "job_url": "https://justjoin.it/job-offer/asseco-qa-engineer-krakow"
+  }
+]

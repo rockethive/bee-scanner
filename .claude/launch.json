@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Scrape + Score (full pipeline)",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/adamwrzaskala/Developer/Bee Scanner' && python3 app.py"],
+      "port": 5001,
+      "autoPort": false
+    }
+  ]
+}

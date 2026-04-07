@@ -1,0 +1,32 @@
+[
+  {
+    "company_name": "Allegro",
+    "job_title": "Product Designer",
+    "platform": "rocketjobs",
+    "job_url": "https://rocketjobs.pl/oferty-pracy/allegro-product-designer"
+  },
+  {
+    "company_name": "Boldare",
+    "job_title": "React Developer",
+    "platform": "rocketjobs",
+    "job_url": "https://rocketjobs.pl/oferty-pracy/boldare-react-developer"
+  },
+  {
+    "company_name": "Boldare",
+    "job_title": "Scrum Master",
+    "platform": "rocketjobs",
+    "job_url": "https://rocketjobs.pl/oferty-pracy/boldare-scrum-master"
+  },
+  {
+    "company_name": "Netguru",
+    "job_title": "Sales Manager",
+    "platform": "rocketjobs",
+    "job_url": "https://rocketjobs.pl/oferty-pracy/netguru-sales-manager"
+  },
+  {
+    "company_name": "Netguru",
+    "job_title": "UX Researcher",
+    "platform": "rocketjobs",
+    "job_url": "https://rocketjobs.pl/oferty-pracy/netguru-ux-researcher"
+  }
+]

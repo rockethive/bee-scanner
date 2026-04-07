@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bee Scanner</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+  <!-- ===================== TOPBAR ===================== -->
+  <header class="topbar">
+    <div class="topbar-inner">
+
+      <!-- Brand -->
+      <a class="topbar-brand" href="/">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="Bee Scanner" class="topbar-logo">
+      </a>
+
+      <!-- Scan actions -->
+      <div class="topbar-actions">
+        <form method="POST" action="/scan" id="scan-form">
+          <input type="hidden" name="scan_mode" id="scan_mode_input" value="quick">
+          <div class="scan-group">
+            <div class="scan-item">
+              <button type="button" class="btn-outline-scan" id="btn-quick" onclick="startScan('quick')">
+                <span class="btn-spinner" id="spinner-quick"></span>
+                <i class="bi bi-lightning-charge" id="icon-quick"></i>
+                Szybki skan
+              </button>
+              <span class="scan-hint">~2 000 ofert · 2-3 min</span>
+            </div>
+            <div class="scan-item">
+              <button type="button" class="btn-filled-scan" id="btn-full" onclick="startScan('full')">
+                <span class="btn-spinner" id="spinner-full"></span>
+                <i class="bi bi-search" id="icon-full"></i>
+                Skan kompleksowy
+              </button>
+              <span class="scan-hint">~10 000 ofert · 10-15 min</span>
+            </div>
+          </div>
+        </form>
+
+        <!-- Right controls -->
+        <div class="topbar-right">
+          <button class="topbar-icon-btn" title="Powiadomienia">
+            <i class="bi bi-bell"></i>
+          </button>
+          <div class="topbar-avatar" title="Profil">BS</div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ===================== SCAN PROGRESS ===================== -->
+  <div id="progress-section" style="display:none">
+    <div class="page-content" style="padding-bottom:0; padding-top:1.25rem;">
+      <div class="progress-card">
+        <div class="progress-title">
+          <span class="progress-spinner"></span>
+          Skanowanie w toku...
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-row-header">
+            <span class="progress-source-label">justjoin.it</span>
+            <span class="progress-source-count" id="jj-label">czekam...</span>
+          </div>
+          <div class="progress-track">
+            <div id="jj-bar" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-row-header">
+            <span class="progress-source-label">rocketjobs.pl</span>
+            <span class="progress-source-count" id="rj-label">czekam...</span>
+          </div>
+          <div class="progress-track">
+            <div id="rj-bar" class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN CONTENT ===================== -->
+  <main class="page-content">
+
+    {% if not companies and not jobs %}
+
+      <!-- EMPTY STATE -->
+      <div class="empty-state">
+        <div class="empty-icon">🐝</div>
+        <p class="empty-heading">Brak danych</p>
+        <p class="empty-sub">Kliknij <strong>Szybki skan</strong> lub <strong>Skan kompleksowy</strong>, żeby pobrać aktualne ogłoszenia z portali rekrutacyjnych.</p>
+      </div>
+
+    {% else %}
+
+      <!-- STAT CARDS -->
+      <div class="stats-row">
+
+        <div class="stat-card stat-card--primary">
+          <div class="stat-card__bg-icon"><i class="bi bi-buildings"></i></div>
+          <div class="stat-number">{{ companies | length }}</div>
+          <div class="stat-label">unikalnych firm</div>
+        </div>
+
+        <div class="stat-card stat-card--yellow">
+          <div class="stat-card__bg-icon"><i class="bi bi-briefcase"></i></div>
+          <div class="stat-number">{{ jobs | length }}</div>
+          <div class="stat-label">ogłoszeń łącznie</div>
+        </div>
+
+        <div class="stat-card stat-card--green">
+          {% set ns = namespace(both=0) %}
+          {% for c in companies %}{% if ',' in c.platforms %}{% set ns.both = ns.both + 1 %}{% endif %}{% endfor %}
+          <div class="stat-card__bg-icon"><i class="bi bi-globe2"></i></div>
+          <div class="stat-number">{{ ns.both }}</div>
+          <div class="stat-label">firm na obu portalach</div>
+        </div>
+
+      </div>
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <div class="filter-bar__search">
+          <i class="bi bi-search filter-bar__search-icon"></i>
+          <input type="text" id="filter-search" class="filter-input" placeholder="Szukaj firmy...">
+        </div>
+        <select id="filter-platform" class="filter-select">
+          <option value="">Wszystkie platformy</option>
+          <option value="justjoin">justjoin.it</option>
+          <option value="rocketjobs">rocketjobs.pl</option>
+          <option value="both">Obie platformy</option>
+        </select>
+        <select id="filter-level" class="filter-select">
+          <option value="">Wszystkie poziomy</option>
+          <option value="A">Poziom A</option>
+          <option value="B">Poziom B</option>
+          <option value="C">Poziom C</option>
+          <option value="D">Poziom D</option>
+        </select>
+        <button class="btn-reset-filters" onclick="resetFilters()">
+          <i class="bi bi-x-circle"></i> Resetuj
+        </button>
+        <span class="filter-count" id="filter-count">{{ companies | length }} firm — wg Lead Score</span>
+      </div>
+
+      <!-- COMPANIES TABLE -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="companies-table">
+            <thead>
+              <tr>
+                <th class="col-index">#</th>
+                <th>Firma</th>
+                <th style="text-align:center">Lead Score</th>
+                <th style="text-align:center">Ogłoszeń</th>
+                <th>Platformy</th>
+                <th>Stanowiska</th>
+                <th style="width:80px"></th>
+              </tr>
+            </thead>
+            <tbody id="companies-tbody">
+
+              <!-- Skeleton rows (hidden by default, shown during scan) -->
+              {% for i in range(6) %}
+              <tr class="skeleton-row" style="display:none">
+                <td><span class="skeleton sk-text" style="width:20px"></span></td>
+                <td><span class="skeleton sk-text" style="width:140px"></span></td>
+                <td style="text-align:center"><span class="skeleton sk-badge"></span></td>
+                <td style="text-align:center"><span class="skeleton sk-pill" style="width:32px"></span></td>
+                <td><span class="skeleton sk-pill" style="width:70px"></span></td>
+                <td><span class="skeleton sk-text" style="width:200px"></span></td>
+                <td></td>
+              </tr>
+              {% endfor %}
+
+              {% for company in companies %}
+              <tr class="company-row"
+                  data-company="{{ company.company_name }}"
+                  data-platform="{{ company.platforms }}"
+                  data-level="{{ company.level if company.level is defined else '' }}"
+                  style="cursor:pointer"
+                  onclick="window.location.href='/company/'+encodeURIComponent(this.dataset.company)">
+                <td class="col-index">{{ loop.index }}</td>
+                <td>
+                  <span class="company-name">{{ company.company_name }}</span>
+                </td>
+                <td style="text-align:center">
+                  {% if company.level is defined and company.level %}
+                    <span class="level-badge level-badge--{{ company.level }}">{{ company.level }}</span>
+                    <div class="score-sub">{{ company.score }} pkt</div>
+                  {% endif %}
+                </td>
+                <td style="text-align:center">
+                  {% set n = company.total_listings | int %}
+                  <span class="count-badge {{ 'count-badge--high' if n >= 5 else ('count-badge--mid' if n >= 3 else 'count-badge--low') }}">
+                    {{ company.total_listings }}
+                  </span>
+                </td>
+                <td>
+                  {% for platform in company.platforms.split(',') %}
+                    <span class="platform-tag platform-tag--{{ platform.strip() }}">{{ platform.strip() }}</span>
+                  {% endfor %}
+                </td>
+                <td class="job-titles-cell" title="{{ company.job_titles }}">
+                  {{ company.job_titles }}
+                </td>
+                <td>
+                  <i class="bi bi-chevron-right row-chevron"></i>
+                </td>
+              </tr>
+              {% endfor %}
+
+              <!-- No results message -->
+              <tr id="no-results-row" style="display:none" class="no-results-row">
+                <td colspan="7">
+                  <i class="bi bi-search" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;color:var(--text-faint)"></i>
+                  Brak wyników dla podanych filtrów
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    {% endif %}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    /* ---- Filters ---- */
+    function applyFilters() {
+      var search   = document.getElementById('filter-search').value.toLowerCase().trim();
+      var platform = document.getElementById('filter-platform').value;
+      var level    = document.getElementById('filter-level').value;
+      var rows     = document.querySelectorAll('tr.company-row');
+      var visible  = 0;
+
+      rows.forEach(function(tr) {
+        var name  = (tr.dataset.company || '').toLowerCase();
+        var plat  = (tr.dataset.platform || '');
+        var lvl   = (tr.dataset.level || '');
+
+        var matchSearch   = !search   || name.includes(search);
+        var matchLevel    = !level    || lvl === level;
+        var matchPlatform = true;
+        if (platform === 'both')       matchPlatform = plat.includes(',');
+        else if (platform === 'justjoin')   matchPlatform = plat.includes('justjoin');
+        else if (platform === 'rocketjobs') matchPlatform = plat.includes('rocketjobs');
+
+        var show = matchSearch && matchLevel && matchPlatform;
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      var noResults = document.getElementById('no-results-row');
+      if (noResults) noResults.style.display = visible === 0 ? '' : 'none';
+
+      var countEl = document.getElementById('filter-count');
+      if (countEl) countEl.textContent = visible + ' firm — wg Lead Score';
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-search').value   = '';
+      document.getElementById('filter-platform').value = '';
+      document.getElementById('filter-level').value    = '';
+      applyFilters();
+    }
+
+    document.getElementById('filter-search')  && document.getElementById('filter-search').addEventListener('input', applyFilters);
+    document.getElementById('filter-platform')&& document.getElementById('filter-platform').addEventListener('change', applyFilters);
+    document.getElementById('filter-level')   && document.getElementById('filter-level').addEventListener('change', applyFilters);
+
+    /* ---- Scan controls ---- */
+    var scanWasRunning = {{ 'true' if scan_running else 'false' }};
+
+    function startScan(mode) {
+      document.getElementById('btn-quick').disabled = true;
+      document.getElementById('btn-full').disabled  = true;
+
+      document.getElementById('spinner-' + mode).classList.add('active');
+      document.getElementById('icon-' + mode).style.display = 'none';
+
+      document.getElementById('progress-section').style.display = 'block';
+      document.getElementById('scan_mode_input').value = mode;
+
+      // Show skeleton rows
+      document.querySelectorAll('.skeleton-row').forEach(function(r){ r.style.display = ''; });
+      document.querySelectorAll('.company-row').forEach(function(r){ r.style.display = 'none'; });
+
+      document.getElementById('scan-form').submit();
+    }
+
+    function updateProgress() {
+      fetch('/progress')
+        .then(function(r) { return r.json(); })
+        .then(function(state) {
+          if (!state.running && !state.done) {
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('btn-quick').disabled = false;
+            document.getElementById('btn-full').disabled  = false;
+            document.getElementById('spinner-quick').classList.remove('active');
+            document.getElementById('spinner-full').classList.remove('active');
+            document.getElementById('icon-quick').style.display = '';
+            document.getElementById('icon-full').style.display  = '';
+            return;
+          }
+
+          document.getElementById('progress-section').style.display = 'block';
+          document.getElementById('btn-quick').disabled = true;
+          document.getElementById('btn-full').disabled  = true;
+
+          var jjF = state.justjoin_fetched, jjT = state.justjoin_total;
+          var jjP = jjT > 0 ? Math.min(Math.round(jjF / jjT * 100), 100) : 0;
+          document.getElementById('jj-label').textContent = jjF + ' / ~' + jjT + ' ofert (' + jjP + '%)';
+          document.getElementById('jj-bar').style.width = jjP + '%';
+
+          var rjF = state.rocketjobs_fetched, rjT = state.rocketjobs_total;
+          var rjP = rjT > 0 ? Math.min(Math.round(rjF / rjT * 100), 100) : 0;
+          document.getElementById('rj-label').textContent = rjF + ' / ~' + rjT + ' ofert (' + rjP + '%)';
+          document.getElementById('rj-bar').style.width = rjP + '%';
+
+          if (state.done) {
+            window.location.reload();
+          } else {
+            setTimeout(updateProgress, 1000);
+          }
+        })
+        .catch(function() { setTimeout(updateProgress, 2000); });
+    }
+
+    if (scanWasRunning) {
+      document.getElementById('progress-section').style.display = 'block';
+      document.getElementById('btn-quick').disabled = true;
+      document.getElementById('btn-full').disabled  = true;
+      updateProgress();
+    }
+  </script>
+
+</body>
+</html>
