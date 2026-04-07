@@ -6,6 +6,5 @@ beautifulsoup4>=4.12.0  # parsowanie HTML (potrzebne do rocketjobs.pl)
 lxml>=4.9.0             # szybszy parser HTML dla BeautifulSoup (opcjonalne, ale zalecane)
 pandas>=2.0.0           # opcjonalne: ułatwia eksport do CSV i agregację
 flask>=3.0.0            # lokalny serwer webowy do podglądu wyników w przeglądarce
-openai>=1.0.0           # OpenAI API — generowanie emaili i podsumowań kontaktu
 python-dotenv>=1.0.0    # wczytywanie zmiennych środowiskowych z pliku .env
 gunicorn>=21.0.0        # serwer produkcyjny (wymagany przez Render)
