@@ -25,6 +25,7 @@ JOB_FIELDS = ["company_name", "job_title", "platform", "job_url"]
 SUMMARY_FIELDS = [
     "company_name", "total_listings", "platforms", "job_titles",
     "score", "level", "level_color", "action", "score_reasons", "matched_criteria",
+    "last_contact_days",
 ]
 
 

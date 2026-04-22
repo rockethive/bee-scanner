@@ -164,6 +164,7 @@
                 <th style="text-align:center">Ogłoszeń</th>
                 <th>Platformy</th>
                 <th>Stanowiska</th>
+                <th style="text-align:center">Ostatni kontakt</th>
                 <th style="width:80px"></th>
               </tr>
             </thead>
@@ -212,6 +213,16 @@
                 </td>
                 <td class="job-titles-cell" title="{{ company.job_titles }}">
                   {{ company.job_titles }}
+                </td>
+                <td style="text-align:center">
+                  {% if company.last_contact_days is defined and company.last_contact_days %}
+                    {% set d = company.last_contact_days | int %}
+                    <span class="contact-days-badge {{ 'contact-days--fresh' if d <= 30 else ('contact-days--mid' if d <= 90 else 'contact-days--old') }}">
+                      {{ d }}d
+                    </span>
+                  {% else %}
+                    <span class="contact-days-badge contact-days--none">—</span>
+                  {% endif %}
                 </td>
                 <td>
                   <i class="bi bi-chevron-right row-chevron"></i>
