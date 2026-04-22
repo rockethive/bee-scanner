@@ -8,3 +8,4 @@ pandas>=2.0.0           # opcjonalne: ułatwia eksport do CSV i agregację
 flask>=3.0.0            # lokalny serwer webowy do podglądu wyników w przeglądarce
 python-dotenv>=1.0.0    # wczytywanie zmiennych środowiskowych z pliku .env
 gunicorn>=21.0.0        # serwer produkcyjny (wymagany przez Render)
+anthropic>=0.40.0       # Claude API — Research AI

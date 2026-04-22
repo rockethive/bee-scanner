@@ -1786,7 +1786,40 @@ body {
 .outreach-badge--no  { background: #f1f5f9; color: #94a3b8; }
 
 /* --------------------------------------------------------------------------
-   20. Responsive
+   20. Research AI
+   -------------------------------------------------------------------------- */
+.btn-research {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-research:hover  { opacity: 0.88; }
+.btn-research:disabled { opacity: 0.6; cursor: default; }
+.research-loading {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  padding: 0.5rem 0;
+  font-style: italic;
+}
+.research-text {
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+}
+.research-error { color: #b91c1c; font-size: 0.85rem; margin-top: 0.5rem; }
+
+/* --------------------------------------------------------------------------
+   21. Responsive
    -------------------------------------------------------------------------- */
 @media (max-width: 900px) {
   .topbar-right .topbar-icon-btn { display: none; }

@@ -27,13 +27,14 @@ except ImportError:
     pass
 
 from urllib.parse import unquote
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for, Response, stream_with_context
 
 from scrapers.justjoin import JustJoinScraper
 from scrapers.rocketjobs import RocketJobsScraper
 from utils.exporter import build_companies_summary, export_jobs_csv, export_summary_csv
 from utils.normalizer import merge_all_jobs
 from utils.outreach import get_outreach_names
+from utils.ai_research import research_company_stream
 
 # HubSpot + AI — opcjonalne (wymagają kluczy API w .env)
 try:
@@ -290,6 +291,40 @@ def api_ai_email():
         return jsonify({"error": "Brak pola 'company_name'"}), 400
     result = generate_email(company_name, email_type, context)
     return jsonify(result)
+
+
+@app.route("/api/research/<path:company_name>")
+def api_research(company_name):
+    """Streamuje analizę firmy przez Claude z web searchem (SSE)."""
+    company_name = unquote(company_name)
+
+    hs_data = {}
+    if INTEGRATIONS_ENABLED:
+        try:
+            result = lookup_company_full(company_name)
+            if result.get("found"):
+                hs_data = {
+                    "industry":  result.get("industry", ""),
+                    "employees": result.get("employees", ""),
+                    "city":      result.get("city", ""),
+                }
+        except Exception:
+            pass
+
+    def generate():
+        try:
+            for chunk in research_company_stream(company_name, hs_data):
+                safe = chunk.replace("\n", "\\n")
+                yield f"data: {safe}\n\n"
+        except Exception as e:
+            yield f"data: Błąd: {e}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 if __name__ == "__main__":

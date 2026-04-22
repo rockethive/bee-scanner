@@ -141,6 +141,25 @@
         </div>
       </div>
 
+      <!-- ===== RESEARCH AI ===== -->
+      <div class="company-col-crm" style="margin-top:1rem">
+        <div class="section-card">
+          <div class="section-card-header">
+            <span style="font-size:1.1rem">✦</span>
+            <span class="section-card-title">Research AI</span>
+          </div>
+          <div id="research-body">
+            <p style="font-size:0.82rem;color:var(--text-secondary);margin:0 0 0.75rem">
+              Claude przeszuka internet i zbierze informacje o firmie przydatne w rozmowie sprzedażowej.
+            </p>
+            <button class="btn-research" id="research-btn" onclick="startResearch()">
+              ✦ Analizuj firmę
+            </button>
+            <div id="research-output" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== RIGHT: Lead Score + Ogłoszenia ===== -->
       <div class="company-col-main">
 
@@ -655,6 +674,55 @@
         return dateStr.substring(0, 10);
       }
     }
+  </script>
+
+  <script>
+  function startResearch() {
+    var btn    = document.getElementById('research-btn');
+    var output = document.getElementById('research-output');
+    btn.disabled = true;
+    btn.textContent = '🔍 Szukam informacji...';
+    output.style.display = 'block';
+    output.innerHTML = '<div class="research-loading">Claude przeszukuje internet — może potrwać 20-30 sekund...</div>';
+
+    var url      = '/api/research/' + encodeURIComponent(COMPANY_NAME);
+    var fullText = '';
+
+    fetch(url).then(function(response) {
+      var reader  = response.body.getReader();
+      var decoder = new TextDecoder();
+
+      function read() {
+        reader.read().then(function(result) {
+          if (result.done) {
+            btn.style.display = 'none';
+            return;
+          }
+          var lines = decoder.decode(result.value).split('\n');
+          lines.forEach(function(line) {
+            if (!line.startsWith('data: ')) return;
+            var chunk = line.slice(6);
+            if (chunk === '[DONE]') { btn.style.display = 'none'; return; }
+            fullText += chunk.replace(/\\n/g, '\n');
+            output.innerHTML = '<div class="research-text">' + renderMd(fullText) + '</div>';
+          });
+          read();
+        });
+      }
+      read();
+    }).catch(function(e) {
+      output.innerHTML = '<div class="research-error">Błąd połączenia: ' + e + '</div>';
+      btn.disabled = false;
+      btn.textContent = '✦ Spróbuj ponownie';
+    });
+  }
+
+  function renderMd(text) {
+    return text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+  }
   </script>
 
 </body>
