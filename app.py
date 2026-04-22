@@ -22,7 +22,7 @@ _csv_lock = threading.Lock()
 # Wczytaj zmienne środowiskowe z .env (jeśli plik istnieje)
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass
 

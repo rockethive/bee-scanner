@@ -37,7 +37,10 @@ napisz wprost "Brak informacji" zamiast zgadywać lub pomijać punkt."""
 
 def research_company_stream(company_name: str, hs_data: dict = None):
     """Generator streamujący odpowiedź Claude z web searchem."""
-    client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or ""
+    if not api_key:
+        raise ValueError("Brak ANTHROPIC_API_KEY — dodaj klucz do .env i Render Environment.")
+    client = anthropic.Anthropic(api_key=api_key)
 
     hs_context = ""
     if hs_data:
