@@ -214,14 +214,14 @@
                 <td class="job-titles-cell" title="{{ company.job_titles }}">
                   {{ company.job_titles }}
                 </td>
-                <td style="text-align:center">
+                <td style="text-align:center" class="contact-days-cell" data-company="{{ company.company_name }}">
                   {% if company.last_contact_days is defined and company.last_contact_days %}
                     {% set d = company.last_contact_days | int %}
                     <span class="contact-days-badge {{ 'contact-days--fresh' if d <= 30 else ('contact-days--mid' if d <= 90 else 'contact-days--old') }}">
                       {{ d }}d
                     </span>
                   {% else %}
-                    <span class="contact-days-badge contact-days--none">—</span>
+                    <span class="contact-days-badge contact-days--none contact-days--pending">...</span>
                   {% endif %}
                 </td>
                 <td>
@@ -355,6 +355,51 @@
       document.getElementById('btn-full').disabled  = true;
       updateProgress();
     }
+  </script>
+
+  <script>
+  (function loadContactDays() {
+    var cells = Array.from(document.querySelectorAll('.contact-days-cell'));
+    var pending = cells.filter(function(c) {
+      return c.querySelector('.contact-days--pending');
+    });
+    if (!pending.length) return;
+
+    var BATCH = 4; // ile równocześnie zapytań
+    var idx = 0;
+
+    function fetchOne(cell) {
+      var company = cell.dataset.company;
+      return fetch('/api/hubspot/last-contact?company=' + encodeURIComponent(company))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var days = data.days;
+          var span = cell.querySelector('span');
+          if (days === null || days === undefined) {
+            span.textContent = '—';
+            return;
+          }
+          var cls = days <= 30 ? 'contact-days--fresh' : (days <= 90 ? 'contact-days--mid' : 'contact-days--old');
+          span.className = 'contact-days-badge ' + cls;
+          span.textContent = days + 'd';
+        })
+        .catch(function() {
+          var span = cell.querySelector('span');
+          if (span) { span.textContent = '—'; }
+        });
+    }
+
+    function runBatch() {
+      if (idx >= pending.length) return;
+      var batch = pending.slice(idx, idx + BATCH);
+      idx += BATCH;
+      Promise.all(batch.map(fetchOne)).then(function() {
+        setTimeout(runBatch, 300);
+      });
+    }
+
+    runBatch();
+  })();
   </script>
 
 </body>

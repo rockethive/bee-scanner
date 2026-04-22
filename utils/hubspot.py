@@ -65,6 +65,30 @@ def search_company(company_name: str) -> dict | None:
         return None
 
 
+def get_last_contact_days(company_name: str):
+    """Pobiera tylko liczbę dni od ostatniego kontaktu dla danej firmy. Szybki endpoint."""
+    url = f"{HUBSPOT_BASE}/crm/v3/objects/companies/search"
+    payload = {
+        "filterGroups": [{"filters": [{"propertyName": "name", "operator": "CONTAINS_TOKEN", "value": company_name}]}],
+        "properties": ["name", "notes_last_contacted"],
+        "limit": 1,
+    }
+    try:
+        r = requests.post(url, json=payload, headers=_headers(), timeout=8)
+        r.raise_for_status()
+        results = r.json().get("results", [])
+        if not results:
+            return None
+        lc = results[0].get("properties", {}).get("notes_last_contacted")
+        if not lc:
+            return None
+        lc_dt = datetime.fromisoformat(lc.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - lc_dt).days
+    except Exception as e:
+        print(f"[hubspot] get_last_contact_days error: {e}")
+        return None
+
+
 def get_activities(company_id: str, limit: int = 5) -> list:
     """
     Pobiera ostatnie N aktywności (notatki, rozmowy, emaile) dla firmy.

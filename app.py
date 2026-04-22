@@ -33,7 +33,7 @@ from utils.normalizer import merge_all_jobs
 
 # HubSpot + AI — opcjonalne (wymagają kluczy API w .env)
 try:
-    from utils.hubspot import lookup_company_full, create_company as hs_create_company
+    from utils.hubspot import lookup_company_full, create_company as hs_create_company, get_last_contact_days
     from utils.ai_writer import generate_email
     INTEGRATIONS_ENABLED = True
 except ImportError as _ie:
@@ -232,6 +232,24 @@ def api_hubspot_lookup():
             daemon=True
         ).start()
     return jsonify(result)
+
+
+@app.route("/api/hubspot/last-contact")
+def api_last_contact():
+    """GET /api/hubspot/last-contact?company=X → {days: N} lub {days: null}"""
+    if not INTEGRATIONS_ENABLED:
+        return jsonify({"days": None}), 200
+    company_name = request.args.get("company", "").strip()
+    if not company_name:
+        return jsonify({"error": "Brak parametru 'company'"}), 400
+    days = get_last_contact_days(company_name)
+    if days is not None:
+        threading.Thread(
+            target=_update_last_contact,
+            args=(company_name, days),
+            daemon=True
+        ).start()
+    return jsonify({"days": days})
 
 
 @app.route("/api/hubspot/create", methods=["POST"])
