@@ -14,7 +14,10 @@
 import csv
 import json
 import os
+import tempfile
 import threading
+
+_csv_lock = threading.Lock()
 
 # Wczytaj zmienne środowiskowe z .env (jeśli plik istnieje)
 try:
@@ -194,28 +197,34 @@ def company_detail(company_name):
 # ---------------------------------------------------------------------------
 
 def _update_last_contact(company_name: str, days: int) -> None:
-    """Zapisuje days_since_contact do companies_summary.csv dla danej firmy."""
-    try:
-        rows = _read_csv(SUMMARY_CSV)
-        if not rows:
-            return
-        updated = False
-        for row in rows:
-            if row.get("company_name", "").strip().lower() == company_name.strip().lower():
-                row["last_contact_days"] = str(days)
-                updated = True
-                break
-        if not updated:
-            return
-        fieldnames = list(rows[0].keys())
-        if "last_contact_days" not in fieldnames:
-            fieldnames.append("last_contact_days")
-        with open(SUMMARY_CSV, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
-            writer.writeheader()
-            writer.writerows(rows)
-    except Exception as e:
-        print(f"[app] Błąd zapisu last_contact_days: {e}")
+    """Zapisuje days_since_contact do companies_summary.csv — bezpiecznie przez lock + atomic write."""
+    with _csv_lock:
+        try:
+            rows = _read_csv(SUMMARY_CSV)
+            if not rows:
+                return
+            updated = False
+            for row in rows:
+                if row.get("company_name", "").strip().lower() == company_name.strip().lower():
+                    row["last_contact_days"] = str(days)
+                    updated = True
+                    break
+            if not updated:
+                return
+            fieldnames = list(rows[0].keys())
+            if "last_contact_days" not in fieldnames:
+                fieldnames.append("last_contact_days")
+            # Atomic write: najpierw temp, potem rename
+            dir_name = os.path.dirname(os.path.abspath(SUMMARY_CSV))
+            with tempfile.NamedTemporaryFile("w", newline="", encoding="utf-8",
+                                             dir=dir_name, delete=False, suffix=".tmp") as tf:
+                writer = csv.DictWriter(tf, fieldnames=fieldnames, extrasaction="ignore")
+                writer.writeheader()
+                writer.writerows(rows)
+                tmp_path = tf.name
+            os.replace(tmp_path, SUMMARY_CSV)
+        except Exception as e:
+            print(f"[app] Błąd zapisu last_contact_days: {e}")
 
 
 @app.route("/api/hubspot/lookup")
@@ -246,12 +255,6 @@ def api_last_contact():
     if not company_name:
         return jsonify({"error": "Brak parametru 'company'"}), 400
     days = get_last_contact_days(company_name)
-    if days is not None:
-        threading.Thread(
-            target=_update_last_contact,
-            args=(company_name, days),
-            daemon=True
-        ).start()
     return jsonify({"days": days})
 
 

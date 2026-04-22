@@ -69,7 +69,7 @@ def get_last_contact_days(company_name: str):
     url = f"{HUBSPOT_BASE}/crm/v3/objects/companies/search"
     payload = {
         "filterGroups": [{"filters": [{"propertyName": "name", "operator": "CONTAINS_TOKEN", "value": company_name}]}],
-        "properties": ["name", "hs_last_sales_activity_timestamp"],
+        "properties": ["name", "notes_last_contacted"],
         "limit": 1,
     }
     try:
@@ -78,7 +78,7 @@ def get_last_contact_days(company_name: str):
         results = r.json().get("results", [])
         if not results:
             return None
-        lc = results[0].get("properties", {}).get("hs_last_sales_activity_timestamp")
+        lc = results[0].get("properties", {}).get("notes_last_contacted")
         if not lc:
             return None
         lc_dt = datetime.fromisoformat(lc.replace("Z", "+00:00"))
