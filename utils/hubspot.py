@@ -51,7 +51,7 @@ def search_company(company_name: str) -> dict | None:
         "properties": [
             "name", "domain", "city", "industry",
             "numberofemployees", "hs_object_id",
-            "hs_lastcontacted", "hubspot_owner_id",
+            "notes_last_contacted", "hubspot_owner_id",
         ],
         "limit": 1,
     }
@@ -259,7 +259,7 @@ def lookup_company_full(company_name: str) -> dict:
     props = company.get("properties", {})
 
     # Oblicz dni od ostatniego kontaktu
-    last_contacted = props.get("hs_lastcontacted")
+    last_contacted = props.get("notes_last_contacted")
     days_since_contact = None
     if last_contacted:
         try:
