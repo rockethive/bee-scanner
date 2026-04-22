@@ -1775,6 +1775,16 @@ body {
 .contact-days--old   { background: #fee2e2; color: #b91c1c; }
 .contact-days--none  { background: #f1f5f9; color: #94a3b8; }
 
+.outreach-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.outreach-badge--yes { background: #dcfce7; color: #15803d; }
+.outreach-badge--no  { background: #f1f5f9; color: #94a3b8; }
+
 /* --------------------------------------------------------------------------
    20. Responsive
    -------------------------------------------------------------------------- */

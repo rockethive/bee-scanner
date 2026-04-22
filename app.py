@@ -30,6 +30,7 @@ from scrapers.justjoin import JustJoinScraper
 from scrapers.rocketjobs import RocketJobsScraper
 from utils.exporter import build_companies_summary, export_jobs_csv, export_summary_csv
 from utils.normalizer import merge_all_jobs
+from utils.outreach import get_outreach_names
 
 # HubSpot + AI — opcjonalne (wymagają kluczy API w .env)
 try:
@@ -60,10 +61,12 @@ scan_state = {
 
 @app.route("/")
 def index():
-    jobs      = _read_csv(JOBS_CSV)
-    companies = _read_csv(SUMMARY_CSV)
+    jobs           = _read_csv(JOBS_CSV)
+    companies      = _read_csv(SUMMARY_CSV)
+    outreach_names = get_outreach_names()
     return render_template("index.html", jobs=jobs, companies=companies,
-                           scan_running=scan_state["running"])
+                           scan_running=scan_state["running"],
+                           outreach_names=outreach_names)
 
 
 @app.route("/scan", methods=["POST"])

@@ -165,6 +165,7 @@
                 <th>Platformy</th>
                 <th>Stanowiska</th>
                 <th style="text-align:center">Ostatni kontakt</th>
+                <th style="text-align:center">Outreach</th>
                 <th style="width:80px"></th>
               </tr>
             </thead>
@@ -222,6 +223,13 @@
                     </span>
                   {% else %}
                     <span class="contact-days-badge contact-days--none contact-days--pending">...</span>
+                  {% endif %}
+                </td>
+                <td style="text-align:center">
+                  {% if company.company_name | lower in outreach_names %}
+                    <span class="outreach-badge outreach-badge--yes">Tak</span>
+                  {% else %}
+                    <span class="outreach-badge outreach-badge--no">Nie</span>
                   {% endif %}
                 </td>
                 <td>
