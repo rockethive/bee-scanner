@@ -50,8 +50,7 @@ def search_company(company_name: str) -> dict | None:
         }],
         "properties": [
             "name", "domain", "city", "industry",
-            "numberofemployees", "hs_object_id",
-            "notes_last_contacted", "hubspot_owner_id",
+            "numberofemployees", "hs_object_id", "hubspot_owner_id",
         ],
         "limit": 1,
     }
@@ -66,11 +65,11 @@ def search_company(company_name: str) -> dict | None:
 
 
 def get_last_contact_days(company_name: str):
-    """Pobiera tylko liczbę dni od ostatniego kontaktu dla danej firmy. Szybki endpoint."""
+    """Pobiera liczbę dni od ostatniej aktywności (notatki, rozmowy, emaile) dla danej firmy."""
     url = f"{HUBSPOT_BASE}/crm/v3/objects/companies/search"
     payload = {
         "filterGroups": [{"filters": [{"propertyName": "name", "operator": "CONTAINS_TOKEN", "value": company_name}]}],
-        "properties": ["name", "notes_last_contacted"],
+        "properties": ["name", "hs_last_sales_activity_timestamp"],
         "limit": 1,
     }
     try:
@@ -79,7 +78,7 @@ def get_last_contact_days(company_name: str):
         results = r.json().get("results", [])
         if not results:
             return None
-        lc = results[0].get("properties", {}).get("notes_last_contacted")
+        lc = results[0].get("properties", {}).get("hs_last_sales_activity_timestamp")
         if not lc:
             return None
         lc_dt = datetime.fromisoformat(lc.replace("Z", "+00:00"))
@@ -295,6 +294,18 @@ def lookup_company_full(company_name: str) -> dict:
     activities  = get_activities(company_id)
     deals       = get_all_deals(company_id)
     owner_name  = get_owner_name(props.get("hubspot_owner_id", ""))
+
+    # Dni od ostatniej aktywności — bierzemy najnowszą z pobranych aktywności
+    days_since_contact = None
+    last_contacted = None
+    if activities:
+        try:
+            ts = activities[0].get("timestamp", "")
+            lc_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            days_since_contact = (datetime.now(timezone.utc) - lc_dt).days
+            last_contacted = ts
+        except Exception:
+            pass
 
     portal_id   = os.environ.get("HUBSPOT_PORTAL_ID", "")
     hubspot_url = f"https://app.hubspot.com/contacts/{portal_id}/company/{company_id}" if portal_id else ""
